@@ -5,18 +5,18 @@ import (
 )
 
 type Emissor struct {
-	position EmmisorPosition
+	position Position
 	message  EmissorMessage
 }
 
-type EmmisorPosition struct {
+type Position struct {
 	x SatelliteAxis
 	y SatelliteAxis
 }
 
 func NewEmmisor(message string, x float64, y float64) (Emissor, error) {
 
-	positionVO, err := NewEmmisorPosition(x, y)
+	positionVO, err := NewPosition(x, y)
 	if err != nil {
 		return Emissor{}, err
 	}
@@ -32,17 +32,17 @@ func NewEmmisor(message string, x float64, y float64) (Emissor, error) {
 	}, nil
 }
 
-func NewEmmisorPosition(x float64, y float64) (EmmisorPosition, error) {
+func NewPosition(x float64, y float64) (Position, error) {
 	xVO, err := NewAxis(x)
 	if err != nil {
-		return EmmisorPosition{}, err
+		return Position{}, err
 	}
 	yVO, err := NewAxis(y)
 	if err != nil {
-		return EmmisorPosition{}, err
+		return Position{}, err
 	}
 
-	return EmmisorPosition{
+	return Position{
 		x: xVO,
 		y: yVO,
 	}, nil
@@ -80,15 +80,15 @@ func (e Emissor) Message() EmissorMessage {
 	return e.message
 }
 
-func (e Emissor) Position() EmmisorPosition {
+func (e Emissor) Position() Position {
 	return e.position
 }
 
-func (e EmmisorPosition) AxisX() SatelliteAxis {
+func (e Position) AxisX() SatelliteAxis {
 	return e.x
 }
 
-func (e EmmisorPosition) AxisY() SatelliteAxis {
+func (e Position) AxisY() SatelliteAxis {
 	return e.y
 }
 

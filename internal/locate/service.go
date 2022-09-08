@@ -7,48 +7,37 @@ import (
 	quasar "github.com/jhonnyesquivel/quasar-op/internal"
 )
 
-type sqlSatellite struct {
-	Name     string
-	Position sqlPosition
-}
-
-type sqlPosition struct {
-	AxisX float64
-	AxisY float64
-}
-
 type Point struct {
 	X float64
 	Y float64
 }
 
-var satellites = [3]sqlSatellite{
-	{Name: "Kenobi", Position: sqlPosition{AxisX: -500, AxisY: -200}},
-	{Name: "Skywalker", Position: sqlPosition{AxisX: 100, AxisY: -100}},
-	{Name: "Sato", Position: sqlPosition{AxisX: 500, AxisY: 100}},
-}
-
 type TopSecretService struct {
+	satelliteRepository quasar.SatelliteRepository
 }
 
-func NewTopSecretService() TopSecretService {
-	return TopSecretService{}
+func NewTopSecretService(repository quasar.SatelliteRepository) TopSecretService {
+	return TopSecretService{
+		satelliteRepository: repository,
+	}
 }
 
-func (s TopSecretService) GetEmissorShip(ctx context.Context, satellites []quasar.Satellite) (quasar.Emissor, error) {
-
+func (s TopSecretService) GetEmissorShip(ctx context.Context, satReq []quasar.Satellite) (quasar.Emissor, error) {
 	var (
 		satMsgs   [][]string
 		distances []float64
 	)
 
-	for _, v := range satellites {
+	for _, v := range satReq {
 		satMsgs = append(satMsgs, v.Message().Value())
 		distances = append(distances, v.Distance().Value())
 	}
 
-	message := getMessage(satMsgs)
-	xAxis, yAxis := getLocation(distances)
+	message := s.getMessage(satMsgs)
+	xAxis, yAxis, err := s.getLocation(ctx, distances)
+	if err != nil {
+		return quasar.Emissor{}, err
+	}
 
 	emissor, err := quasar.NewEmmisor(message, xAxis, yAxis)
 	if err != nil {
@@ -60,7 +49,7 @@ func (s TopSecretService) GetEmissorShip(ctx context.Context, satellites []quasa
 
 func (s TopSecretService) MapSatellite(name string, distance float64, msg []string) (quasar.Satellite, error) {
 
-	satellite, err := quasar.NewSatellite(name, distance, msg)
+	satellite, err := quasar.NewSatelliteWithDistance(name, distance, msg)
 	if err != nil {
 		return quasar.Satellite{}, err
 	}
@@ -68,7 +57,7 @@ func (s TopSecretService) MapSatellite(name string, distance float64, msg []stri
 	return satellite, nil
 }
 
-func getMessage(messages [][]string) (msg string) {
+func (s TopSecretService) getMessage(messages [][]string) (msg string) {
 	it, msg := len(messages[2]), ""
 
 	if len(messages[0]) > len(messages[1]) {
@@ -93,70 +82,25 @@ func getMessage(messages [][]string) (msg string) {
 	return msg
 }
 
-// func getLocation(distances []float64) (x, y float64) {
+// // algorithm: https://math.stackexchange.com/a/884851
+func (s TopSecretService) getLocation(ctx context.Context, distances []float64) (float64, float64, error) {
 
-// 	//unit vector in a direction from point1 to point 2
-// 	ksDistance :=
-// 		math.Sqrt(math.Pow(float64(satellites[1].Position.AxisX)-float64(satellites[0].Position.AxisX), 2) + math.Pow(float64(satellites[1].Position.AxisY)-float64(satellites[0].Position.AxisY), 2))
+	p, err := s.satelliteRepository.Fetch(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
 
-// 	ex := Point{
-// 		X: (float64(satellites[1].Position.AxisX) - float64(satellites[0].Position.AxisX)) / ksDistance,
-// 		Y: (float64(satellites[1].Position.AxisY) - float64(satellites[0].Position.AxisY)) / ksDistance,
-// 	}
+	A := -2*p[0].Position().AxisX().Value() + 2*p[1].Position().AxisX().Value()
+	B := -2*p[0].Position().AxisY().Value() + 2*p[1].Position().AxisY().Value()
+	C := math.Pow(distances[0], 2) - math.Pow(distances[1], 2) - math.Pow(p[0].Position().AxisX().Value(), 2) + math.Pow(p[1].Position().AxisX().Value(), 2) - math.Pow(p[0].Position().AxisY().Value(), 2) + math.Pow(p[1].Position().AxisY().Value(), 2)
 
-// 	aux := Point{
-// 		X: (float64(satellites[2].Position.AxisX) - float64(satellites[0].Position.AxisX)),
-// 		Y: (float64(satellites[2].Position.AxisY) - float64(satellites[0].Position.AxisY)),
-// 	}
-
-// 	//signed magnitude of the x component
-// 	i := ex.X*aux.X + ex.Y*aux.Y
-
-// 	//the unit vector in the y direction.
-// 	aux2 := Point{
-// 		X: float64(satellites[2].Position.AxisX) - float64(satellites[0].Position.AxisX) - i*ex.X,
-// 		Y: float64(satellites[2].Position.AxisY) - float64(satellites[0].Position.AxisY) - i*ex.X,
-// 	}
-
-// 	ey := Point{
-// 		X: aux2.X / normalize(aux2),
-// 		Y: aux2.Y / normalize(aux2),
-// 	}
-
-// 	//the signed magnitude of the y component
-// 	j := ey.X*aux.X + ey.Y*aux.Y
-
-// 	//coordinates
-// 	x1 := (math.Pow(float64(distances[0]), 2) - math.Pow(float64(distances[1]), 2) + math.Pow(ksDistance, 2)) / (2 * ksDistance)
-// 	y1 := (math.Pow(float64(distances[0]), 2)-math.Pow(float64(distances[2]), 2)+math.Pow(i, 2)+math.Pow(j, 2))/(2*j) - (i * float64(x) / j)
-
-// 	//result coordinates
-// 	x = float64(float64(satellites[0].Position.AxisX) + x1*ex.X + y1*ey.X)
-// 	y = float64(float64(satellites[0].Position.AxisY) + x1*ex.Y + y1*ey.Y)
-
-// 	return x, y
-// }
-
-func getLocation(distances []float64) (x, y float64) {
-	print(distances[1])
-	return trilateration(distances, satellites)
-
-}
-
-// algorithm: https://math.stackexchange.com/a/884851
-func trilateration(r []float64, p [3]sqlSatellite) (X float64, Y float64) {
-
-	A := -2*p[0].Position.AxisX + 2*p[1].Position.AxisX
-	B := -2*p[0].Position.AxisY + 2*p[1].Position.AxisY
-	C := math.Pow(r[0], 2) - math.Pow(r[1], 2) - math.Pow(p[0].Position.AxisX, 2) + math.Pow(p[1].Position.AxisX, 2) - math.Pow(p[0].Position.AxisY, 2) + math.Pow(p[1].Position.AxisY, 2)
-
-	D := -2*p[1].Position.AxisX + 2*p[2].Position.AxisX
-	E := -2*p[1].Position.AxisY + 2*p[2].Position.AxisY
-	F := math.Pow(r[1], 2) - math.Pow(r[2], 2) - math.Pow(p[1].Position.AxisX, 2) + math.Pow(p[2].Position.AxisX, 2) - math.Pow(p[1].Position.AxisY, 2) + math.Pow(p[2].Position.AxisY, 2)
+	D := -2*p[1].Position().AxisX().Value() + 2*p[2].Position().AxisX().Value()
+	E := -2*p[1].Position().AxisY().Value() + 2*p[2].Position().AxisY().Value()
+	F := math.Pow(distances[1], 2) - math.Pow(distances[2], 2) - math.Pow(p[1].Position().AxisX().Value(), 2) + math.Pow(p[2].Position().AxisX().Value(), 2) - math.Pow(p[1].Position().AxisY().Value(), 2) + math.Pow(p[2].Position().AxisY().Value(), 2)
 
 	// determinants solution
 	determinant := (A*E - B*D)
-	X = (C*E - F*B) / determinant
-	Y = (A*F - C*D) / determinant
-	return X, Y
+	X := (C*E - F*B) / determinant
+	Y := (A*F - C*D) / determinant
+	return X, Y, nil
 }

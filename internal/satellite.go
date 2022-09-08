@@ -1,6 +1,7 @@
 package quasar
 
 import (
+	"context"
 	"errors"
 )
 
@@ -10,9 +11,14 @@ type Satellite struct {
 	name     SateliteName
 	distance SateliteDistance
 	message  SateliteMessage
+	position Position
 }
 
-func NewSatellite(name string, distance float64, message []string) (Satellite, error) {
+type SatelliteRepository interface {
+	Fetch(ctx context.Context) ([]*Satellite, error)
+}
+
+func NewSatelliteWithDistance(name string, distance float64, message []string) (Satellite, error) {
 	nameVO, err := NewSateliteName(name)
 	if err != nil {
 		return Satellite{}, err
@@ -32,6 +38,23 @@ func NewSatellite(name string, distance float64, message []string) (Satellite, e
 		name:     nameVO,
 		distance: distanceVO,
 		message:  messageVO,
+	}, nil
+}
+
+func NewSatelliteWithPosition(name string, x, y float64) (Satellite, error) {
+	nameVO, err := NewSateliteName(name)
+	if err != nil {
+		return Satellite{}, err
+	}
+
+	positionVO, err := NewPosition(x, y)
+	if err != nil {
+		return Satellite{}, err
+	}
+
+	return Satellite{
+		name:     nameVO,
+		position: positionVO,
 	}, nil
 }
 
@@ -89,6 +112,10 @@ func (s Satellite) Distance() SateliteDistance {
 
 func (s Satellite) Message() SateliteMessage {
 	return s.message
+}
+
+func (e Satellite) Position() Position {
+	return e.position
 }
 
 var ErrDistanceEmpty = errors.New("the field distance can not be empty")
