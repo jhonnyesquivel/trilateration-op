@@ -13,7 +13,6 @@ type Server struct {
 	httpAddr string
 	engine   *gin.Engine
 
-	// deps
 	topsecretService locate.TopSecretService
 }
 
@@ -21,9 +20,8 @@ const VERSION_1 = "v1"
 
 func New(host string, port uint, topSecretService locate.TopSecretService) Server {
 	srv := Server{
-		engine:   gin.New(),
-		httpAddr: fmt.Sprintf("%s:%d", host, port),
-
+		engine:           gin.New(),
+		httpAddr:         fmt.Sprintf("%s:%d", host, port),
 		topsecretService: topSecretService,
 	}
 
@@ -37,5 +35,7 @@ func (s *Server) Run() error {
 }
 
 func (s *Server) registerRoutes() {
-	s.engine.POST(fmt.Sprintf("%v/topsecret", VERSION_1), topsecret.CreateHandler(s.topsecretService))
+	s.engine.POST(fmt.Sprintf("%v/topsecret", VERSION_1), topsecret.TopSecretGETHandler(s.topsecretService))
+	s.engine.POST(fmt.Sprintf("%v/topsecret_split/:satellite", VERSION_1), topsecret.TopSecretSplitPOSTHandler(s.topsecretService))
+	s.engine.GET(fmt.Sprintf("%v/topsecret_split", VERSION_1), topsecret.TopSecretSplitGETHandler(s.topsecretService))
 }

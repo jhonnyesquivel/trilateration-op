@@ -3,6 +3,7 @@ package locate
 import (
 	"context"
 	"math"
+	"strings"
 
 	quasar "github.com/jhonnyesquivel/quasar-op/internal"
 )
@@ -13,16 +14,68 @@ type Point struct {
 }
 
 type TopSecretService struct {
-	satelliteRepository quasar.SatelliteRepository
+	repository quasar.SatelliteRepository
 }
 
 func NewTopSecretService(repository quasar.SatelliteRepository) TopSecretService {
+
 	return TopSecretService{
-		satelliteRepository: repository,
+		repository: repository,
 	}
 }
 
-func (s TopSecretService) GetEmissorShip(ctx context.Context, satReq []quasar.Satellite) (quasar.Emissor, error) {
+func (s *TopSecretService) GetEmissorShip(ctx context.Context, satReq []*quasar.Satellite) (quasar.Emissor, error) {
+
+	dbSats, err := s.repository.GetAll(ctx)
+	if err != nil {
+		return quasar.Emissor{}, err
+	}
+
+	satMap := make(map[string]*quasar.Satellite)
+	satBase := make([]*quasar.Satellite, len(dbSats))
+	for _, s := range dbSats {
+		satMap[strings.ToLower(s.Name().Value())] = s
+	}
+
+	for i, s := range satReq {
+		x := satMap[strings.ToLower(s.Name().Value())].X()
+		y := satMap[strings.ToLower(s.Name().Value())].Y()
+
+		sb, err := quasar.NewSatellite(s.Name().Value(), s.Distance().Value(), s.Message().Value(), x, y)
+		if err != nil {
+			return quasar.Emissor{}, err
+		}
+
+		satBase[i] = &sb
+	}
+
+	return s.getEmissorShip(ctx, satBase)
+}
+
+func (s *TopSecretService) GetEmissorShipFromDB(ctx context.Context) (quasar.Emissor, error) {
+	satellites, err := s.repository.GetAll(ctx)
+	if err != nil {
+		return quasar.Emissor{}, err
+	}
+	return s.GetEmissorShip(ctx, satellites)
+}
+
+func (s *TopSecretService) SaveSatelliteDistance(ctx context.Context, name string, distance float64, message []string) error {
+
+	sat, err := s.MapSatellite(name, message, distance)
+	if err != nil {
+		return err
+	}
+
+	err = s.repository.SaveDistance(ctx, sat)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *TopSecretService) getEmissorShip(ctx context.Context, satReq []*quasar.Satellite) (quasar.Emissor, error) {
 	var (
 		satMsgs   [][]string
 		distances []float64
@@ -34,7 +87,7 @@ func (s TopSecretService) GetEmissorShip(ctx context.Context, satReq []quasar.Sa
 	}
 
 	message := s.getMessage(satMsgs)
-	xAxis, yAxis, err := s.getLocation(ctx, distances)
+	xAxis, yAxis, err := s.getLocation(satReq, distances)
 	if err != nil {
 		return quasar.Emissor{}, err
 	}
@@ -47,9 +100,9 @@ func (s TopSecretService) GetEmissorShip(ctx context.Context, satReq []quasar.Sa
 	return emissor, nil
 }
 
-func (s TopSecretService) MapSatellite(name string, distance float64, msg []string) (quasar.Satellite, error) {
+func (s *TopSecretService) MapSatellite(name string, msg []string, distance float64, coords ...float64) (quasar.Satellite, error) {
 
-	satellite, err := quasar.NewSatelliteWithDistance(name, distance, msg)
+	satellite, err := quasar.NewSatellite(name, distance, msg, coords...)
 	if err != nil {
 		return quasar.Satellite{}, err
 	}
@@ -57,46 +110,43 @@ func (s TopSecretService) MapSatellite(name string, distance float64, msg []stri
 	return satellite, nil
 }
 
-func (s TopSecretService) getMessage(messages [][]string) (msg string) {
-	it, msg := len(messages[2]), ""
-
-	if len(messages[0]) > len(messages[1]) {
-		it = len(messages[0])
-	}
-
-	if len(messages[1]) > len(messages[2]) {
-		it = len(messages[1])
-	}
-
-	for i := 0; i < it; i++ {
-		if len(messages[0]) > i {
-			msg = msg + " " + messages[0][i]
-		}
-		if len(messages[1]) > i {
-			msg = msg + " " + messages[1][i]
-		}
-		if len(messages[2]) > i {
-			msg = msg + " " + messages[2][i]
+func (s *TopSecretService) getMessage(messages [][]string) (msg string) {
+	var fullMsg []string
+	var maxItms = 0
+	for _, v := range messages {
+		if l := len(v); l > maxItms {
+			maxItms = l
 		}
 	}
-	return msg
+
+	for j := 0; j < maxItms; j++ {
+		for i := 0; i < len(messages); i++ {
+			if len(messages[i]) > j {
+				if word := messages[i][j]; len(word) > 0 {
+					if len(fullMsg) == 0 {
+						fullMsg = append(fullMsg, []string{word}...)
+					} else if fullMsg[len(fullMsg)-1] != word {
+						fullMsg = append(fullMsg, []string{word}...)
+					}
+				}
+			}
+		}
+	}
+
+	return strings.Join(fullMsg, " ")
+
 }
 
 // // algorithm: https://math.stackexchange.com/a/884851
-func (s TopSecretService) getLocation(ctx context.Context, distances []float64) (float64, float64, error) {
+func (s *TopSecretService) getLocation(p []*quasar.Satellite, distances []float64) (float64, float64, error) {
 
-	p, err := s.satelliteRepository.Fetch(ctx)
-	if err != nil {
-		return 0, 0, err
-	}
+	A := -2*p[0].X() + 2*p[1].X()
+	B := -2*p[0].Y() + 2*p[1].Y()
+	C := math.Pow(distances[0], 2) - math.Pow(distances[1], 2) - math.Pow(p[0].X(), 2) + math.Pow(p[1].X(), 2) - math.Pow(p[0].Y(), 2) + math.Pow(p[1].Y(), 2)
 
-	A := -2*p[0].Position().AxisX().Value() + 2*p[1].Position().AxisX().Value()
-	B := -2*p[0].Position().AxisY().Value() + 2*p[1].Position().AxisY().Value()
-	C := math.Pow(distances[0], 2) - math.Pow(distances[1], 2) - math.Pow(p[0].Position().AxisX().Value(), 2) + math.Pow(p[1].Position().AxisX().Value(), 2) - math.Pow(p[0].Position().AxisY().Value(), 2) + math.Pow(p[1].Position().AxisY().Value(), 2)
-
-	D := -2*p[1].Position().AxisX().Value() + 2*p[2].Position().AxisX().Value()
-	E := -2*p[1].Position().AxisY().Value() + 2*p[2].Position().AxisY().Value()
-	F := math.Pow(distances[1], 2) - math.Pow(distances[2], 2) - math.Pow(p[1].Position().AxisX().Value(), 2) + math.Pow(p[2].Position().AxisX().Value(), 2) - math.Pow(p[1].Position().AxisY().Value(), 2) + math.Pow(p[2].Position().AxisY().Value(), 2)
+	D := -2*p[1].X() + 2*p[2].X()
+	E := -2*p[1].Y() + 2*p[2].Y()
+	F := math.Pow(distances[1], 2) - math.Pow(distances[2], 2) - math.Pow(p[1].X(), 2) + math.Pow(p[2].X(), 2) - math.Pow(p[1].Y(), 2) + math.Pow(p[2].Y(), 2)
 
 	// determinants solution
 	determinant := (A*E - B*D)

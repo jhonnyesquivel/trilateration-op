@@ -9,12 +9,14 @@ import (
 	"github.com/jhonnyesquivel/quasar-op/internal/locate"
 )
 
-type satelliteRequest struct {
-	Satelites []struct {
-		Name     string   `json:"name" binding:"required"`
-		Distance float64  `json:"distance" binding:"required"`
-		Message  []string `json:"message" binding:"required"`
-	} `json:"satellites" binding:"required"`
+type topsecretReq struct {
+	Satelites []topsecretSplitReq `json:"satellites" binding:"required"`
+}
+
+type topsecretSplitReq struct {
+	Name     string   `json:"name"`
+	Distance float64  `json:"distance" binding:"required"`
+	Message  []string `json:"message" binding:"required"`
 }
 
 type topsecretResponse struct {
@@ -27,12 +29,12 @@ type positionResponse struct {
 	Y float64 `json:"y"`
 }
 
-// CreateHandler returns an HTTP handler for courses creation.
-func CreateHandler(topsecretService locate.TopSecretService) gin.HandlerFunc {
+// TopSecretGETHandler returns an HTTP handler for courses creation.
+func TopSecretGETHandler(topsecretService locate.TopSecretService) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var (
-			req        satelliteRequest
-			satellites []quasar.Satellite
+			req        topsecretReq
+			satellites []*quasar.Satellite
 		)
 
 		if err := ctx.BindJSON(&req); err != nil {
@@ -41,15 +43,14 @@ func CreateHandler(topsecretService locate.TopSecretService) gin.HandlerFunc {
 		}
 
 		for _, v := range req.Satelites {
-			sMap, err := topsecretService.MapSatellite(v.Name, v.Distance, v.Message)
+			sMap, err := topsecretService.MapSatellite(v.Name, v.Message, v.Distance)
 			if err != nil {
 				break
 			}
-			satellites = append(satellites, sMap)
+			satellites = append(satellites, &sMap)
 		}
 
 		emmisor, err := topsecretService.GetEmissorShip(ctx, satellites)
-
 		if err != nil {
 			switch {
 			case errors.Is(err, quasar.ErrDistanceEmpty),
@@ -68,5 +69,63 @@ func CreateHandler(topsecretService locate.TopSecretService) gin.HandlerFunc {
 		}
 
 		ctx.JSON(http.StatusOK, resp)
+	}
+}
+
+// TopSecretHandler returns an HTTP handler for courses creation.
+func TopSecretSplitPOSTHandler(topsecretService locate.TopSecretService) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var (
+			req topsecretSplitReq
+		)
+
+		if err := ctx.BindJSON(&req); err != nil {
+			ctx.JSON(http.StatusBadRequest, err.Error())
+			return
+		}
+		req.Name = ctx.Param("satellite")
+
+		err := topsecretService.SaveSatelliteDistance(ctx, req.Name, req.Distance, req.Message)
+
+		if err != nil {
+			switch {
+			case errors.Is(err, quasar.ErrDistanceEmpty),
+				errors.Is(err, quasar.ErrMessageEmpty), errors.Is(err, quasar.ErrNameEmpty):
+				ctx.JSON(http.StatusBadRequest, err.Error())
+				return
+			default:
+				ctx.JSON(http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+
+		ctx.Status(http.StatusOK)
+	}
+}
+
+// TopSecretHandler returns an HTTP handler for courses creation.
+func TopSecretSplitGETHandler(topsecretService locate.TopSecretService) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		emmisor, err := topsecretService.GetEmissorShipFromDB(ctx)
+		if err != nil {
+			switch {
+			case errors.Is(err, quasar.ErrDistanceEmpty),
+				errors.Is(err, quasar.ErrMessageEmpty), errors.Is(err, quasar.ErrNameEmpty):
+				ctx.JSON(http.StatusBadRequest, err.Error())
+				return
+			default:
+				ctx.JSON(http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+
+		resp := &topsecretResponse{
+			Position: positionResponse{emmisor.Position().AxisX().Value(), emmisor.Position().AxisY().Value()},
+			Message:  emmisor.Message().Value(),
+		}
+
+		ctx.JSON(http.StatusOK, resp)
+
 	}
 }

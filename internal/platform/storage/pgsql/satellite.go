@@ -10,6 +10,8 @@ type sqlSatellite struct {
 	Id         string   `pg:",pk"`
 	Name       string
 	PositionId string
+	Distance   float64
+	Message    []string     `pg:",array"`
 	Position   *sqlPosition `pg:",rel:has-one"`
 }
 

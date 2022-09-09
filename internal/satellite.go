@@ -15,7 +15,8 @@ type Satellite struct {
 }
 
 type SatelliteRepository interface {
-	Fetch(ctx context.Context) ([]*Satellite, error)
+	GetAll(ctx context.Context) ([]*Satellite, error)
+	SaveDistance(ctx context.Context, req Satellite) error
 }
 
 func NewSatelliteWithDistance(name string, distance float64, message []string) (Satellite, error) {
@@ -41,13 +42,26 @@ func NewSatelliteWithDistance(name string, distance float64, message []string) (
 	}, nil
 }
 
-func NewSatelliteWithPosition(name string, x, y float64) (Satellite, error) {
+func NewSatellite(name string, distance float64, message []string, positions ...float64) (Satellite, error) {
+	var positionVO Position
 	nameVO, err := NewSateliteName(name)
 	if err != nil {
 		return Satellite{}, err
 	}
 
-	positionVO, err := NewPosition(x, y)
+	if len(positions) >= 2 {
+		positionVO, err = NewPosition(positions[0], positions[1])
+		if err != nil {
+			return Satellite{}, err
+		}
+	}
+
+	distanceVO, err := NewSateliteDistance(distance)
+	if err != nil {
+		return Satellite{}, err
+	}
+
+	messageVO, err := NewSateliteMessage(message)
 	if err != nil {
 		return Satellite{}, err
 	}
@@ -55,6 +69,8 @@ func NewSatelliteWithPosition(name string, x, y float64) (Satellite, error) {
 	return Satellite{
 		name:     nameVO,
 		position: positionVO,
+		distance: distanceVO,
+		message:  messageVO,
 	}, nil
 }
 
@@ -116,6 +132,14 @@ func (s Satellite) Message() SateliteMessage {
 
 func (e Satellite) Position() Position {
 	return e.position
+}
+
+func (e Satellite) X() float64 {
+	return e.position.x.value
+}
+
+func (e Satellite) Y() float64 {
+	return e.position.y.value
 }
 
 var ErrDistanceEmpty = errors.New("the field distance can not be empty")
