@@ -53,10 +53,17 @@ func TopSecretGETHandler(topsecretService locate.TopSecretService) gin.HandlerFu
 		emmisor, err := topsecretService.GetEmissorShip(ctx, satellites)
 		if err != nil {
 			switch {
-			case errors.Is(err, quasar.ErrDistanceEmpty),
-				errors.Is(err, quasar.ErrMessageEmpty), errors.Is(err, quasar.ErrNameEmpty):
+			case
+				errors.Is(err, quasar.ErrDistanceEmpty),
+				errors.Is(err, quasar.ErrMessageEmpty),
+				errors.Is(err, quasar.ErrNotEnoughSatellites),
+				errors.Is(err, quasar.ErrSatelliteNotExistsOrIsMissing),
+				errors.Is(err, quasar.ErrNameEmpty):
 				ctx.JSON(http.StatusBadRequest, err.Error())
 				return
+			case
+				errors.Is(err, quasar.ErrNotLocalizable):
+				ctx.JSON(http.StatusNotFound, err.Error())
 			default:
 				ctx.JSON(http.StatusInternalServerError, err.Error())
 				return

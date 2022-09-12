@@ -31,33 +31,45 @@ func (s *TopSecretService) GetEmissorShip(ctx context.Context, satReq []*quasar.
 		return quasar.Emissor{}, err
 	}
 
-	satMap := make(map[string]*quasar.Satellite)
-	satBase := make([]*quasar.Satellite, len(dbSats))
-	for _, s := range dbSats {
-		satMap[strings.ToLower(s.Name().Value())] = s
-	}
+	if satReq != nil {
 
-	for i, s := range satReq {
-		x := satMap[strings.ToLower(s.Name().Value())].X()
-		y := satMap[strings.ToLower(s.Name().Value())].Y()
-
-		sb, err := quasar.NewSatellite(s.Name().Value(), s.Distance().Value(), s.Message().Value(), x, y)
-		if err != nil {
-			return quasar.Emissor{}, err
+		if len(satReq) != 3 {
+			return quasar.Emissor{}, quasar.ErrNotEnoughSatellites
 		}
 
-		satBase[i] = &sb
+		satMap := make(map[string]*quasar.Satellite)
+		satBase := make([]*quasar.Satellite, len(dbSats))
+
+		for _, s := range dbSats {
+			satMap[strings.ToLower(s.Name().Value())] = s
+		}
+
+		for i, s := range satReq {
+
+			if mapx, mapy :=
+				satMap[strings.ToLower(s.Name().Value())], satMap[strings.ToLower(s.Name().Value())]; mapx != nil && mapy != nil {
+				x := mapx.X()
+				y := mapy.Y()
+
+				sb, err := quasar.NewSatellite(s.Name().Value(), s.Distance().Value(), s.Message().Value(), x, y)
+				if err != nil {
+					return quasar.Emissor{}, err
+				}
+
+				satBase[i] = &sb
+			} else {
+				return quasar.Emissor{}, quasar.ErrSatelliteNotExistsOrIsMissing
+			}
+
+		}
+		return s.getEmissorShip(ctx, satBase)
 	}
 
-	return s.getEmissorShip(ctx, satBase)
+	return s.getEmissorShip(ctx, dbSats)
 }
 
 func (s *TopSecretService) GetEmissorShipFromDB(ctx context.Context) (quasar.Emissor, error) {
-	satellites, err := s.repository.GetAll(ctx)
-	if err != nil {
-		return quasar.Emissor{}, err
-	}
-	return s.GetEmissorShip(ctx, satellites)
+	return s.GetEmissorShip(ctx, nil)
 }
 
 func (s *TopSecretService) SaveSatelliteDistance(ctx context.Context, name string, distance float64, message []string) error {
@@ -90,6 +102,10 @@ func (s *TopSecretService) getEmissorShip(ctx context.Context, satReq []*quasar.
 	xAxis, yAxis, err := s.getLocation(satReq, distances)
 	if err != nil {
 		return quasar.Emissor{}, err
+	}
+
+	if math.IsNaN(xAxis) || math.IsNaN(yAxis) {
+		return quasar.Emissor{}, quasar.ErrNotLocalizable
 	}
 
 	emissor, err := quasar.NewEmmisor(message, xAxis, yAxis)

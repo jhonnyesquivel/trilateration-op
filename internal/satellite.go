@@ -95,6 +95,10 @@ func NewSateliteDistance(value float64) (SateliteDistance, error) {
 }
 
 func NewSateliteName(value string) (SateliteName, error) {
+	if value == "" {
+		return SateliteName{}, ErrNameEmpty
+	}
+
 	return SateliteName{
 		value: value,
 	}, nil
@@ -145,3 +149,6 @@ func (e Satellite) Y() float64 {
 var ErrDistanceEmpty = errors.New("the field distance can not be empty")
 var ErrNameEmpty = errors.New("the field name can not be empty")
 var ErrMessageEmpty = errors.New("the message parts can not be empty")
+var ErrNotEnoughSatellites = errors.New("3 satellites must be sent")
+var ErrSatelliteNotExistsOrIsMissing = errors.New("satellite does not exist or is missing a correct one")
+var ErrNotLocalizable = errors.New("is not posible to localize emissor with data provided")

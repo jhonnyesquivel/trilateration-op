@@ -11,7 +11,7 @@
       "mode": "debug",
       "program": "main.go",
       "env": {
-        "DATABASE_URL": "postgres://postgres:postgrespw@host.docker.internal:49153/postgres?sslmode=disable",
+        "DATABASE_URL": "postgres://postgres:mesopotamia@35.239.39.176:5432/postgres?sslmode=disable",
         "LOG_LEVEL": "debug",
         "HOST": "localhost",
         "PORT": "8080"
