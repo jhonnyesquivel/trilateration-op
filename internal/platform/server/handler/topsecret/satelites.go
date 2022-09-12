@@ -29,8 +29,17 @@ type positionResponse struct {
 	Y float64 `json:"y"`
 }
 
-// TopSecretGETHandler returns an HTTP handler for courses creation.
-func TopSecretGETHandler(topsecretService locate.TopSecretService) gin.HandlerFunc {
+// Top Secret godoc
+// @Summary Get the emissor coords
+// @Description Get the emissor coords using a trilateration algorithm
+// @Accept  json
+// @Produce  json
+// @Param satellites body topsecretReq true "Get emissor location"
+// @Success 200 {object} topsecretResponse
+// @Failure 400 {string} Error
+// @Failure 404 {string} Error
+// @Router /topsecret [post]
+func TopSecretPOSTHandler(topsecretService locate.TopSecretService) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var (
 			req        topsecretReq
@@ -83,7 +92,16 @@ func TopSecretGETHandler(topsecretService locate.TopSecretService) gin.HandlerFu
 	}
 }
 
-// TopSecretHandler returns an HTTP handler for courses creation.
+// Top Secret split godoc
+// @Summary Save emissor distance
+// @Description Save the distance from the emissor to an specific satellite
+// @Accept  json
+// @Param satellite body topsecretSplitReq true "Emissor distance part"
+// @Param   satellite_name     path    string     true        "Satellite Name"
+// @Success 200
+// @Failure 400 {string} Error
+// @Failure 404 {string} Error
+// @Router /topsecret_split/{satellite_name} [post]
 func TopSecretSplitPOSTHandler(topsecretService locate.TopSecretService) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var (
@@ -114,7 +132,14 @@ func TopSecretSplitPOSTHandler(topsecretService locate.TopSecretService) gin.Han
 	}
 }
 
-// TopSecretHandler returns an HTTP handler for courses creation.
+// Top Secret split godoc
+// @Summary Save Get the emissor coords using a trilateration algorithm using stored data
+// @Description Get the emissor coords using a trilateration algorithm with stored data
+// @Produce  json
+// @Success 200 {object} topsecretResponse
+// @Failure 400 {string} Error
+// @Failure 404 {string} Error
+// @Router /topsecret_split [get]
 func TopSecretSplitGETHandler(topsecretService locate.TopSecretService) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 

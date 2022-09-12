@@ -1,0 +1,183 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "contact": {}
+    },
+    "paths": {
+        "/topsecret": {
+            "post": {
+                "description": "Get the emissor coords using a trilateration algorithm",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get the emissor coords",
+                "parameters": [
+                    {
+                        "description": "Get emissor location",
+                        "name": "satellites",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/topsecret.topsecretReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/topsecret.topsecretResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/topsecret_split": {
+            "get": {
+                "description": "Get the emissor coords using a trilateration algorithm using stored data",
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Save Get the emissor coords using a trilateration algorithm using stored data",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/topsecret.topsecretResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/topsecret_split/{satellite_name}": {
+            "post": {
+                "description": "Save the distance from the emissor to an specific satellite",
+                "consumes": [
+                    "application/json"
+                ],
+                "summary": "Save emissor distance",
+                "parameters": [
+                    {
+                        "description": "Emissor distance part",
+                        "name": "satellite",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/topsecret.topsecretSplitReq"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Satellite Name",
+                        "name": "satellite_name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "topsecret.positionResponse": {
+            "type": "object",
+            "properties": {
+                "x": {
+                    "type": "number"
+                },
+                "y": {
+                    "type": "number"
+                }
+            }
+        },
+        "topsecret.topsecretReq": {
+            "type": "object",
+            "required": [
+                "satellites"
+            ],
+            "properties": {
+                "satellites": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/topsecret.topsecretSplitReq"
+                    }
+                }
+            }
+        },
+        "topsecret.topsecretResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "position": {
+                    "$ref": "#/definitions/topsecret.positionResponse"
+                }
+            }
+        },
+        "topsecret.topsecretSplitReq": {
+            "type": "object",
+            "required": [
+                "distance",
+                "message"
+            ],
+            "properties": {
+                "distance": {
+                    "type": "number"
+                },
+                "message": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

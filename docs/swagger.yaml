@@ -1,0 +1,120 @@
+definitions:
+  topsecret.positionResponse:
+    properties:
+      x:
+        type: number
+      "y":
+        type: number
+    type: object
+  topsecret.topsecretReq:
+    properties:
+      satellites:
+        items:
+          $ref: '#/definitions/topsecret.topsecretSplitReq'
+        type: array
+    required:
+    - satellites
+    type: object
+  topsecret.topsecretResponse:
+    properties:
+      message:
+        type: string
+      position:
+        $ref: '#/definitions/topsecret.positionResponse'
+    type: object
+  topsecret.topsecretSplitReq:
+    properties:
+      distance:
+        type: number
+      message:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+    required:
+    - distance
+    - message
+    type: object
+info:
+  contact: {}
+paths:
+  /topsecret:
+    post:
+      consumes:
+      - application/json
+      description: Get the emissor coords using a trilateration algorithm
+      parameters:
+      - description: Get emissor location
+        in: body
+        name: satellites
+        required: true
+        schema:
+          $ref: '#/definitions/topsecret.topsecretReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/topsecret.topsecretResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      summary: Get the emissor coords
+  /topsecret_split:
+    get:
+      description: Get the emissor coords using a trilateration algorithm using stored
+        data
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/topsecret.topsecretResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      summary: Save Get the emissor coords using a trilateration algorithm using stored
+        data
+  /topsecret_split/{satellite_name}:
+    post:
+      consumes:
+      - application/json
+      description: Save the distance from the emissor to an specific satellite
+      parameters:
+      - description: Emissor distance part
+        in: body
+        name: satellite
+        required: true
+        schema:
+          $ref: '#/definitions/topsecret.topsecretSplitReq'
+      - description: Satellite Name
+        in: path
+        name: satellite_name
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      summary: Save emissor distance
+swagger: "2.0"

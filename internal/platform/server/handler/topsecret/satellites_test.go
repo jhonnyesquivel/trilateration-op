@@ -52,7 +52,7 @@ func (suite *TopSecretHandlersTestSuite) SetupSuite() {
 	gin.SetMode(gin.TestMode)
 
 	r := gin.New()
-	r.POST("/topsecret", TopSecretGETHandler(service))
+	r.POST("/topsecret", TopSecretPOSTHandler(service))
 	r.POST("/topsecret_split/:satellite", TopSecretSplitPOSTHandler(service))
 	r.GET("/topsecret_split", TopSecretSplitGETHandler(service))
 

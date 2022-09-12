@@ -5,8 +5,11 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jhonnyesquivel/quasar-op/docs"
 	"github.com/jhonnyesquivel/quasar-op/internal/locate"
 	"github.com/jhonnyesquivel/quasar-op/internal/platform/server/handler/topsecret"
+	swaggerfiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type Server struct {
@@ -19,6 +22,7 @@ type Server struct {
 const VERSION_1 = "v1"
 
 func New(host string, port uint, topSecretService locate.TopSecretService) Server {
+	gin.SetMode("release")
 	srv := Server{
 		engine:           gin.New(),
 		httpAddr:         fmt.Sprintf("%s:%d", host, port),
@@ -35,7 +39,18 @@ func (s *Server) Run() error {
 }
 
 func (s *Server) registerRoutes() {
-	s.engine.POST(fmt.Sprintf("%v/topsecret", VERSION_1), topsecret.TopSecretGETHandler(s.topsecretService))
-	s.engine.POST(fmt.Sprintf("%v/topsecret_split/:satellite", VERSION_1), topsecret.TopSecretSplitPOSTHandler(s.topsecretService))
-	s.engine.GET(fmt.Sprintf("%v/topsecret_split", VERSION_1), topsecret.TopSecretSplitGETHandler(s.topsecretService))
+	// docs.SwaggerInfo.Title = "Operación Fuego de Quasar"
+	// docs.SwaggerInfo.Description = "Operación Fuego de Quasar -  MELI challenge"
+	// docs.SwaggerInfo.Version = "1.0"
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	//docs.SwaggerInfo.Schemes = []string{"https"}
+
+	v1 := s.engine.Group("/api/v1")
+	{
+		v1.POST("/topsecret", topsecret.TopSecretPOSTHandler(s.topsecretService))
+		v1.POST("/topsecret_split/:satellite", topsecret.TopSecretSplitPOSTHandler(s.topsecretService))
+		v1.GET("/topsecret_split", topsecret.TopSecretSplitGETHandler(s.topsecretService))
+	}
+	s.engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+
 }
