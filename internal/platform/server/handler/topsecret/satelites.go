@@ -35,22 +35,26 @@ func TopSecretGETHandler(topsecretService locate.TopSecretService) gin.HandlerFu
 		var (
 			req        topsecretReq
 			satellites []*quasar.Satellite
+			err        error
+			emmisor    quasar.Emissor
 		)
 
-		if err := ctx.BindJSON(&req); err != nil {
+		if err = ctx.BindJSON(&req); err != nil {
 			ctx.JSON(http.StatusBadRequest, err.Error())
 			return
 		}
 
 		for _, v := range req.Satelites {
-			sMap, err := topsecretService.MapSatellite(v.Name, v.Message, v.Distance)
-			if err != nil {
+			sMap, locErr := topsecretService.MapSatellite(v.Name, v.Message, v.Distance)
+			if locErr != nil {
+				err = locErr
 				break
 			}
 			satellites = append(satellites, &sMap)
 		}
-
-		emmisor, err := topsecretService.GetEmissorShip(ctx, satellites)
+		if err == nil {
+			emmisor, err = topsecretService.GetEmissorShip(ctx, satellites)
+		}
 		if err != nil {
 			switch {
 			case

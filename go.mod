@@ -6,6 +6,7 @@ require (
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-pg/pg/v10 v10.10.6
 	github.com/pkg/errors v0.9.1
+	github.com/stretchr/testify v1.8.0
 )
 
 require (
@@ -27,7 +28,6 @@ require (
 	github.com/pelletier/go-toml/v2 v2.0.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/objx v0.4.0 // indirect
-	github.com/stretchr/testify v1.8.0 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
 	github.com/vmihailenco/bufpool v0.1.11 // indirect
